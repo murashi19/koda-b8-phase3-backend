@@ -2,7 +2,7 @@ import { where } from "sequelize";
 import { default as db } from "../models/index.cjs";
 import bcrypt from "bcrypt";
 import { constants } from "node:http2";
-import { signToken } from "../lib/jwt";
+import { signToken } from "../lib/jwt.js";
 const { Users } = db;
 
 export async function register(req, res) {
