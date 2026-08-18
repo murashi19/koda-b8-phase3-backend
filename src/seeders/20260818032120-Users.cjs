@@ -22,6 +22,11 @@ module.exports = {
         password: hashedPassword,
         created_at: new Date(),
       },
+      {
+        email: "test@gmail.com",
+        password: hashedPassword,
+        created_at: new Date(),
+      },
     ]);
   },
 
@@ -37,7 +42,9 @@ module.exports = {
       {
         email: "test@example.com",
       },
-      {},
+      {
+        email: "test@gmail.com",
+      },
     );
   },
 };
