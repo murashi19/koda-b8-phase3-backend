@@ -42,3 +42,47 @@ export async function register(req, res) {
     });
   }
 }
+
+export async function login(req, res) {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(constants.HTTP_STATUS_BAD_REQUEST).json({
+        success: false,
+        message: "Email or Password required",
+      });
+    }
+    const user = await Users.scope("withPassword").findOne({
+      where: { email },
+    });
+    if (!user) {
+      return res.status(constants.HTTP_STATUS_UNAUTHORIZED).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(constants.HTTP_STATUS_UNAUTHORIZED).json({
+        success: false,
+        message: "Incorrect password",
+      });
+    }
+    return res.status(constants.HTTP_STATUS_OK).json({
+      success: true,
+      message: "Login Successfully",
+      result: {
+        id: user.id,
+        email: user.email,
+      },
+    });
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+
+    return res.status(constants.HTTP_STATUS_INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}

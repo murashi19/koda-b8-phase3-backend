@@ -29,6 +29,11 @@ module.exports = (sequelize, DataTypes) => {
           exclude: ["password"],
         },
       },
+      scopes: {
+        withPassword: {
+          attributes: { include: ["password"] },
+        },
+      },
     },
   );
   return Users;
