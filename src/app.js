@@ -3,6 +3,7 @@ import express from "express";
 // import testRoute from "./routes/testRoute.js";
 import authRoute from "./routes/authRoute.js";
 import linkRoute from "./routes/linkRoute.js";
+import redirectRoute from "./routes/redirectRoute.js";
 import corsMiddleware from "./middlewares/cors.js";
 
 const app = express();
@@ -14,5 +15,6 @@ app.use(corsMiddleware);
 // app.use("/api", testRoute);
 app.use("/api", authRoute);
 app.use("/api", linkRoute);
+app.use("/", redirectRoute);
 
 export default app;
