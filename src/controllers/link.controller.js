@@ -1,4 +1,4 @@
-import { where } from "sequelize";
+import { Op, where } from "sequelize";
 import { default as db } from "../models/index.cjs";
 import { constants } from "node:http2";
 
@@ -6,12 +6,19 @@ const { Links } = db;
 
 export async function GetAllLinks(req, res) {
   try {
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const page = Math.max(parseInt(req.query.page, 5) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 5) || 5, 1);
     const userId = req.user.id;
+    const search = req.query.search?.trim();
 
     const offset = (page - 1) * limit;
     const where = { user_id: userId };
+    if (search) {
+      where[Op.or] = [
+        { slug: { [Op.iLike]: `%${search}%` } },
+        { original_url: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
     const total = await Links.count({ where });
 
     const totalPages = Math.ceil(total / limit);
@@ -30,6 +37,8 @@ export async function GetAllLinks(req, res) {
       created_at: link.created_at,
     }));
 
+    console.log("search param:", search);
+    console.log("where:", JSON.stringify(where));
     return res.status(constants.HTTP_STATUS_OK).json({
       success: true,
       message: "Lists Links",
