@@ -41,8 +41,8 @@ export const getDashboardStats = async (req, res, next) => {
 
 export async function getAllLinks(req, res) {
   try {
-    const page = Math.max(parseInt(req.query.page, 5) || 1, 1);
-    const limit = Math.max(parseInt(req.query.limit, 5) || 5, 1);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 5, 1);
     const userId = req.user.id;
     const search = req.query.search?.trim();
 

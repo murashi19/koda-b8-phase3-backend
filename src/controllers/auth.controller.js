@@ -80,7 +80,7 @@ export async function login(req, res) {
       success: true,
       message: "Login Successfully",
       token,
-      result: {
+      results: {
         id: user.id,
         email: user.email,
       },
