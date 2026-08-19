@@ -1,3 +1,4 @@
+import { where } from "sequelize";
 import { default as db } from "../models/index.cjs";
 import { constants } from "node:http2";
 
@@ -5,11 +6,22 @@ const { Links } = db;
 
 export async function GetAllLinks(req, res) {
   try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
     const userId = req.user.id;
+
+    const offset = (page - 1) * limit;
+    const where = { user_id: userId };
+    const total = await Links.count({ where });
+
+    const totalPages = Math.ceil(total / limit);
     const links = await Links.findAll({
-      where: { user_id: userId },
+      where,
       order: [["created_at", "DESC"]],
+      limit,
+      offset,
     });
+
     const results = links.map((link) => ({
       id: link.id,
       original_url: link.original_url,
@@ -17,13 +29,21 @@ export async function GetAllLinks(req, res) {
       short_url: `${req.protocol}://${req.get("host")}/${link.slug}`,
       created_at: link.created_at,
     }));
+
     return res.status(constants.HTTP_STATUS_OK).json({
       success: true,
       message: "Lists Links",
       results,
+      pagination: {
+        page,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
     });
   } catch (error) {
-    console.error("GetAllProduct:", error);
+    console.error("GetAllLinks:", error);
 
     return res.status(constants.HTTP_STATUS_INTERNAL_SERVER_ERROR).json({
       success: false,
