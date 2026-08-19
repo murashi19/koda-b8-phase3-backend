@@ -144,8 +144,10 @@ Response:
 {
   "success": true,
   "message": "Login berhasil",
+  "token": "jwt_token_here",
   "results": {
-    "token": "jwt_token_here"
+    "id": "1",
+    "email": "user@mail.com"
   }
 }
 ```
