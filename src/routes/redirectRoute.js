@@ -1,8 +1,8 @@
 import express from "express";
-import { RedirectLink } from "../controllers/link.controller.js";
+import { redirectLink } from "../controllers/link.controller.js";
 
 const router = express.Router();
 
-router.get("/:slug", RedirectLink);
+router.get("/:slug", redirectLink);
 
 export default router;

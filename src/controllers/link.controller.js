@@ -1,10 +1,45 @@
-import { Op, where } from "sequelize";
+import { Op } from "sequelize";
 import { default as db } from "../models/index.cjs";
 import { constants } from "node:http2";
 
 const { Links } = db;
 
-export async function GetAllLinks(req, res) {
+export const getDashboardStats = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const totalLinks = await Links.count({
+      where: { user_id: userId },
+    });
+
+    const recentLinks = await Links.findAll({
+      where: { user_id: userId },
+      order: [["created_at", "DESC"]],
+      limit: 2,
+    });
+
+    const formattedRecent = recentLinks.map((link) => ({
+      id: link.id,
+      original_url: link.original_url,
+      slug: link.slug,
+      short_url: `${req.protocol}://${req.get("host")}/${link.slug}`,
+      created_at: link.created_at,
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: "Dashboard stats retrieved",
+      results: {
+        totalLinks,
+        recentLinks: formattedRecent,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export async function getAllLinks(req, res) {
   try {
     const page = Math.max(parseInt(req.query.page, 5) || 1, 1);
     const limit = Math.max(parseInt(req.query.limit, 5) || 5, 1);
@@ -61,7 +96,7 @@ export async function GetAllLinks(req, res) {
   }
 }
 
-export async function CreateLink(req, res) {
+export async function createLink(req, res) {
   try {
     const { originalUrl, customSlug } = req.body;
     const userId = req.user.id;
@@ -155,7 +190,7 @@ function generatedSlug(length = 6) {
   return result;
 }
 
-export async function DeleteLink(req, res) {
+export async function deleteLink(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -183,7 +218,7 @@ export async function DeleteLink(req, res) {
   }
 }
 
-export async function RedirectLink(req, res) {
+export async function redirectLink(req, res) {
   try {
     const { slug } = req.params;
     const link = await Links.findOne({ where: { slug } });
