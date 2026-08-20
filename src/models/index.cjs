@@ -4,12 +4,13 @@ const fs = require("fs");
 const path = require("path");
 const Sequelize = require("sequelize");
 const process = require("process");
+
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || "development";
-const config = require(__dirname + "/../config/db.json")[env];
-const db = {};
 
+const db = {};
 let sequelize;
+
 console.log("NODE_ENV:", process.env.NODE_ENV);
 
 try {
@@ -17,9 +18,22 @@ try {
 } catch (error) {
   console.error("PG NOT FOUND:", error.message);
 }
-if (config.use_env_variable) {
-  sequelize = new Sequelize(process.env[config.use_env_variable], config);
+
+if (env === "production") {
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: "postgres",
+    dialectModule: require("pg"),
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
+    },
+  });
 } else {
+  const config = require(__dirname + "/../config/db.json")[env];
+
   sequelize = new Sequelize(
     config.database,
     config.username,
@@ -42,6 +56,7 @@ fs.readdirSync(__dirname)
       sequelize,
       Sequelize.DataTypes,
     );
+
     db[model.name] = model;
   });
 
