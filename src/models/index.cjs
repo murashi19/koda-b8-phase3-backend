@@ -10,6 +10,13 @@ const config = require(__dirname + "/../config/db.json")[env];
 const db = {};
 
 let sequelize;
+console.log("NODE_ENV:", process.env.NODE_ENV);
+
+try {
+  console.log("PG PATH:", require.resolve("pg"));
+} catch (error) {
+  console.error("PG NOT FOUND:", error.message);
+}
 if (config.use_env_variable) {
   sequelize = new Sequelize(process.env[config.use_env_variable], config);
 } else {
