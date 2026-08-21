@@ -1,8 +1,11 @@
 import { Op } from "sequelize";
 import { default as db } from "../models/index.cjs";
 import { constants } from "node:http2";
+import redis from "../lib/redis.js";
 
 const { Links } = db;
+
+const LINK_CACHE_TTL_SECONDS = 3600; // 1 hour
 
 export const getDashboardStats = async (req, res, next) => {
   try {
@@ -204,6 +207,13 @@ export async function deleteLink(req, res) {
       });
     }
     await link.destroy();
+
+    try {
+      await redis.del(link.slug);
+    } catch (cacheError) {
+      console.error("Redis del error:", cacheError.message);
+    }
+
     res.status(constants.HTTP_STATUS_OK).json({
       success: true,
       message: "Link deleted successfully",
@@ -221,6 +231,15 @@ export async function deleteLink(req, res) {
 export async function redirectLink(req, res) {
   try {
     const { slug } = req.params;
+    try {
+      const cachedUrl = await redis.get(slug);
+      if (cachedUrl) {
+        return res.redirect(301, cachedUrl);
+      }
+    } catch (cacheError) {
+      console.error("Redis get error:", cacheError.message);
+    }
+
     const link = await Links.findOne({ where: { slug } });
     if (!link) {
       return res.status(constants.HTTP_STATUS_NOT_FOUND).json({
@@ -228,6 +247,15 @@ export async function redirectLink(req, res) {
         message: "Link not found",
       });
     }
+
+    try {
+      await redis.set(slug, link.original_url, {
+        EX: LINK_CACHE_TTL_SECONDS,
+      });
+    } catch (cacheError) {
+      console.error("Redis set error:", cacheError.message);
+    }
+
     res.redirect(301, link.original_url);
   } catch (error) {
     console.error("RedirectLink:", error);

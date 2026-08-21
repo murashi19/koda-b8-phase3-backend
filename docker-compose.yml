@@ -18,6 +18,21 @@ services:
       retries: 10
       start_period: 10s
 
+  redis:
+    image: redis:alpine
+    container_name: backend_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   backend:
     build:
       context: .
@@ -26,6 +41,8 @@ services:
     restart: unless-stopped
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "8080:8080"
@@ -36,6 +53,9 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: backendapi
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
 
 volumes:
   postgres_data:
+  redis_data:
