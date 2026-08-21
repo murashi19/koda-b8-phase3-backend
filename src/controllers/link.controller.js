@@ -5,7 +5,8 @@ import redis from "../lib/redis.js";
 
 const { Links } = db;
 
-const LINK_CACHE_TTL_SECONDS = 3600; // 1 hour
+const LINK_CACHE_TTL_SECONDS = 3600; // 1 jam
+const LIST_CACHE_TTL_SECONDS = 60;
 
 export const getDashboardStats = async (req, res, next) => {
   try {
@@ -48,6 +49,16 @@ export async function getAllLinks(req, res) {
     const limit = Math.max(parseInt(req.query.limit, 10) || 5, 1);
     const userId = req.user.id;
     const search = req.query.search?.trim();
+    const cacheKey = buildListCacheKey(userId, { page, limit, search });
+
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return res.status(constants.HTTP_STATUS_OK).json(JSON.parse(cached));
+      }
+    } catch (cacheError) {
+      console.error("Redis get error:", cacheError.message);
+    }
 
     const offset = (page - 1) * limit;
     const where = { user_id: userId };
@@ -75,9 +86,7 @@ export async function getAllLinks(req, res) {
       created_at: link.created_at,
     }));
 
-    console.log("search param:", search);
-    console.log("where:", JSON.stringify(where));
-    return res.status(constants.HTTP_STATUS_OK).json({
+    const payload = {
       success: true,
       message: "Lists Links",
       results,
@@ -88,7 +97,17 @@ export async function getAllLinks(req, res) {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
-    });
+    };
+
+    try {
+      await redis.set(cacheKey, JSON.stringify(payload), {
+        EX: LIST_CACHE_TTL_SECONDS,
+      });
+    } catch (cacheError) {
+      console.error("Redis set error:", cacheError.message);
+    }
+
+    return res.status(constants.HTTP_STATUS_OK).json(payload);
   } catch (error) {
     console.error("GetAllLinks:", error);
 
@@ -96,6 +115,21 @@ export async function getAllLinks(req, res) {
       success: false,
       message: "Failed to fetch links",
     });
+  }
+}
+
+function buildListCacheKey(userId, { page, limit, search }) {
+  return `links:list:${userId}:page=${page}:limit=${limit}:search=${search || ""}`;
+}
+
+async function invalidateUserListCache(userId) {
+  try {
+    const pattern = `links:list:${userId}:*`;
+    for await (const key of redis.scanIterator({ MATCH: pattern })) {
+      await redis.del(key);
+    }
+  } catch (cacheError) {
+    console.error("Redis list cache invalidation error:", cacheError.message);
   }
 }
 
@@ -164,6 +198,9 @@ export async function createLink(req, res) {
       original_url: originalUrl,
       slug,
     });
+
+    await invalidateUserListCache(userId);
+
     res.status(constants.HTTP_STATUS_CREATED).json({
       success: true,
       message: "Link created successfully",
@@ -213,6 +250,7 @@ export async function deleteLink(req, res) {
     } catch (cacheError) {
       console.error("Redis del error:", cacheError.message);
     }
+    await invalidateUserListCache(userId);
 
     res.status(constants.HTTP_STATUS_OK).json({
       success: true,
